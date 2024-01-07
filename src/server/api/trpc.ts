@@ -90,7 +90,7 @@ export const publicProcedure = t.procedure;
  */
 export const loggedOutProcedure = t.procedure.use(({ ctx, next }) => {
   if (ctx.session && ctx.session.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+    throw new TRPCError({ code: "FORBIDDEN" });
   }
   return next({ ctx });
 });
@@ -128,7 +128,7 @@ export const adminProcedure = t.procedure.use(({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   if (ctx.session.user.role !== "ADMIN" && ctx.session.user.role !== "PRIMARY_ADMIN") {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+    throw new TRPCError({ code: "FORBIDDEN" });
   }
   return next({
     ctx: {
@@ -143,7 +143,7 @@ export const primaryAdminProcedure = t.procedure.use(({ ctx, next }) => {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   if (ctx.session.user.role !== "PRIMARY_ADMIN") {
-    throw new TRPCError({ code: "UNAUTHORIZED" });
+    throw new TRPCError({ code: "FORBIDDEN" });
   }
   return next({
     ctx: {
