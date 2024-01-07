@@ -82,6 +82,9 @@ const config = {
       typescript: true,
       node: true,
     },
+    tailwindcss: {
+      callees: ["cn", "clsx", "twMerge"],
+    },
   },
 };
 
