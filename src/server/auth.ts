@@ -1,13 +1,12 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import {
-  getServerSession,
-  type DefaultSession,
-  type NextAuthOptions,
-} from "next-auth";
+import { getServerSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-
 import { env } from "~/env";
 import { db } from "~/server/db";
+import type { DefaultUser, DefaultSession, NextAuthOptions } from "next-auth";
+import type { GoogleProfile } from "next-auth/providers/google";
+
+type UserRole = "USER" | "ADMIN" | "PRIMARY_ADMIN";
 
 /**
  * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
@@ -19,15 +18,19 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
+      role: UserRole;
       // ...other properties
-      // role: UserRole;
     } & DefaultSession["user"];
   }
 
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
+  interface User extends DefaultUser {
+    role: UserRole;
+  }
+}
+declare module "next-auth/providers/google" {
+  interface GoogleProfile {
+    role?: UserRole;
+  }
 }
 
 /**
@@ -42,12 +45,22 @@ export const authOptions: NextAuthOptions = {
       user: {
         ...session.user,
         id: user.id,
+        role: user.role,
       },
     }),
   },
   adapter: PrismaAdapter(db),
   providers: [
     GoogleProvider({
+      profile(profile: GoogleProfile) {
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+          role: profile.role ?? "USER",
+        };
+      },
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
     }),

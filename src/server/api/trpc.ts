@@ -81,15 +81,68 @@ export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure;
 
 /**
- * Protected (authenticated) procedure
+ * Logged out (unauthenticated) procedure
+ *
+ * If you want a query or mutation to ONLY be accessible to logged out users, use this. It verifies
+ * the session is invalid and guarantees `ctx.session.user` is null.
+ *
+ * @see https://trpc.io/docs/procedures
+ */
+export const loggedOutProcedure = t.procedure.use(({ ctx, next }) => {
+  if (ctx.session && ctx.session.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({ ctx });
+});
+
+/**
+ * Logged in (authenticated) procedure
  *
  * If you want a query or mutation to ONLY be accessible to logged in users, use this. It verifies
  * the session is valid and guarantees `ctx.session.user` is not null.
  *
  * @see https://trpc.io/docs/procedures
  */
-export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
+export const loggedInProcedure = t.procedure.use(({ ctx, next }) => {
   if (!ctx.session || !ctx.session.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({
+    ctx: {
+      // infers the `session` as non-nullable
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});
+
+/**
+ * Admin procedure
+ *
+ * If you want a query or mutation to ONLY be accessible to admins, use this. It verifies the
+ * session is valid and guarantees `ctx.session.user` is not null and is an admin or primary admin.
+ *
+ * @see https://trpc.io/docs/procedures
+ */
+export const adminProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.session || !ctx.session.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  if (ctx.session.user.role !== "ADMIN" && ctx.session.user.role !== "PRIMARY_ADMIN") {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({
+    ctx: {
+      // infers the `session` as non-nullable
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});
+
+export const primaryAdminProcedure = t.procedure.use(({ ctx, next }) => {
+  if (!ctx.session || !ctx.session.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  if (ctx.session.user.role !== "PRIMARY_ADMIN") {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
   return next({
